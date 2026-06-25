@@ -2,22 +2,19 @@
 # -*- coding: utf-8 -*-
 
 import requests
-import json
-import time
-from datetime import datetime
 import xml.etree.ElementTree as ET
-import subprocess
+from datetime import datetime
 import os
 
-SEND_KEY = "SCT369834TbsLvWr4OKy7yAcm583z4iXhd"
-
-GITHUB_USER = "PhantomText"
-GITHUB_REPO = "paper-daily"
-GITHUB_TOKEN = "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"
+# ==================== 配置 ====================
+# 从 GitHub 秘密变量读取
+SEND_KEY = os.environ.get('SEND_KEY', '')
+GITHUB_TOKEN = os.environ.get('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', '')
 
 # ==================== 功能函数 ====================
 
-def fetch_papers(category="cs.AI", max_results=3):
+def fetch_papers(category="cs.AI", max_results=5):
+    """从 arXiv 爬取最新论文"""
     url = f"http://export.arxiv.org/api/query?search_query=cat:{category}&sortBy=submittedDate&max_results={max_results}"
     
     try:
@@ -41,7 +38,7 @@ def fetch_papers(category="cs.AI", max_results=3):
             
             papers.append({
                 'title': title,
-                'summary': summary[:300] + "..." if len(summary) > 300 else summary,
+                'summary': summary[:500] + "..." if len(summary) > 500 else summary,
                 'published': published,
                 'pdf_url': pdf_url
             })
@@ -52,138 +49,165 @@ def fetch_papers(category="cs.AI", max_results=3):
         return []
 
 def generate_html(papers):
-    """生成 HTML 网页"""
+    """生成漂亮的 HTML 网页"""
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     
-    html = f"""<!DOCTYPE html>
-<html>
+    html = f'''<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI论文速递 - PhantomText</title>
     <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
         body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            max-width: 900px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 1000px;
             margin: 0 auto;
-            padding: 20px;
-            background: #f5f7fa;
-            color: #333;
+            padding: 30px 20px;
+            background: #f0f2f5;
+            color: #1a1a2e;
         }}
-        h1 {{
+        .header {{
             text-align: center;
-            color: #2c3e50;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 10px;
+            padding: 30px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            color: white;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        }}
+        .header h1 {{
+            font-size: 32px;
+            letter-spacing: 2px;
+        }}
+        .header .time {{
+            opacity: 0.85;
+            margin-top: 8px;
+            font-size: 14px;
         }}
         .paper {{
             background: white;
-            border-radius: 10px;
-            padding: 20px 25px;
-            margin: 20px 0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            transition: 0.3s;
+            border-radius: 12px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
         }}
         .paper:hover {{
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10);
         }}
-        .paper h3 {{
-            margin: 0 0 8px 0;
-            color: #2c3e50;
+        .paper .title {{
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a2e;
+            margin-bottom: 6px;
         }}
-        .paper .date {{
-            color: #7f8c8d;
+        .paper .title a {{
+            color: #1a1a2e;
+            text-decoration: none;
+        }}
+        .paper .title a:hover {{
+            color: #667eea;
+        }}
+        .paper .meta {{
+            color: #888;
             font-size: 14px;
+            margin-bottom: 10px;
         }}
         .paper .summary {{
-            color: #555;
-            line-height: 1.6;
-            margin: 10px 0;
+            color: #444;
+            line-height: 1.7;
+            font-size: 15px;
         }}
         .paper .link {{
             display: inline-block;
-            background: #3498db;
+            margin-top: 12px;
+            background: #667eea;
             color: white;
-            padding: 6px 16px;
-            border-radius: 5px;
+            padding: 6px 18px;
+            border-radius: 20px;
             text-decoration: none;
             font-size: 14px;
+            transition: background 0.2s;
         }}
         .paper .link:hover {{
-            background: #2980b9;
+            background: #5a6fd6;
         }}
         .footer {{
             text-align: center;
-            color: #95a5a6;
-            font-size: 14px;
-            margin-top: 30px;
-            border-top: 1px solid #ddd;
+            color: #aaa;
+            font-size: 13px;
+            margin-top: 40px;
             padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }}
+        .badge {{
+            display: inline-block;
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 2px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
+        }}
+        @media (max-width: 600px) {{
+            body {{ padding: 16px; }}
+            .header h1 {{ font-size: 22px; }}
+            .paper {{ padding: 18px; }}
+            .paper .title {{ font-size: 17px; }}
         }}
     </style>
 </head>
 <body>
-    <h1>📚 AI论文速递</h1>
-    <p style="text-align:center;color:#7f8c8d;">更新于：{now}</p>
-"""
+    <div class="header">
+        <h1>📚 AI 论文速递</h1>
+        <div class="time">🕐 最后更新：{now}</div>
+    </div>
+'''
     
-    for i, paper in enumerate(papers[:5], 1):
-        html += f"""
+    if not papers:
+        html += '<p style="text-align:center;color:#888;">📭 今日暂无新论文</p>'
+    else:
+        for paper in papers:
+            html += f'''
     <div class="paper">
-        <h3>🔬 {paper['title']}</h3>
-        <div class="date">📅 {paper['published']}</div>
+        <div class="title"><a href="{paper['pdf_url']}" target="_blank">{paper['title']}</a></div>
+        <div class="meta">📅 {paper['published']}</div>
         <div class="summary">{paper['summary']}</div>
         <a class="link" href="{paper['pdf_url']}" target="_blank">📄 阅读原文</a>
     </div>
-"""
+'''
     
-    html += f"""
+    html += f'''
     <div class="footer">
-        Powered by PhantomText 🤖 | 每日自动更新
+        🤖 Powered by PhantomText · 每日自动更新
     </div>
 </body>
 </html>
-"""
+'''
     return html
 
-def push_to_github(content):
-    """推送到 GitHub"""
-    try:
-        # 克隆仓库
-        os.system('rm -rf /tmp/paper-daily')
-        os.system(f'git clone https://{GITHUB_USER}:{GITHUB_TOKEN}@github.com/{GITHUB_USER}/{GITHUB_REPO}.git /tmp/paper-daily')
-        
-        # 写入文件
-        with open('/tmp/paper-daily/index.html', 'w', encoding='utf-8') as f:
-            f.write(content)
-        
-        # 提交并推送
-        os.chdir('/tmp/paper-daily')
-        os.system('git config user.name "PhantomText"')
-        os.system('git config user.email "phantomtext@bot.com"')
-        os.system('git add index.html')
-        os.system(f'git commit -m "自动更新: {datetime.now().strftime("%Y-%m-%d %H:%M")}"')
-        os.system('git push origin main')
-        
-        print("✅ 已推送到 GitHub")
-        return True
-    except Exception as e:
-        print(f"❌ GitHub 推送失败: {e}")
-        return False
-
-def push_to_serverchan(title, content):
+def push_to_serverchan(message):
     """推送到 Server酱（微信）"""
+    if not SEND_KEY:
+        print("⚠️ SEND_KEY 未设置，跳过微信推送")
+        return
+    
     try:
         url = f"https://sctapi.ftqq.com/{SEND_KEY}.send"
-        data = {"title": title, "desp": content}
+        data = {
+            "title": "PhantomText 更新完成",
+            "desp": message
+        }
         response = requests.post(url, data=data, timeout=10)
         if response.status_code == 200:
             print("✅ 微信推送成功！")
-            return True
-        return False
+        else:
+            print(f"❌ 微信推送失败: {response.text}")
     except Exception as e:
-        print(f"❌ 微信推送失败: {e}")
-        return False
+        print(f"❌ 微信推送异常: {e}")
 
 def main():
     print("🤖 PhantomText 启动...")
@@ -195,7 +219,7 @@ def main():
     
     if not papers:
         print("❌ 未获取到论文")
-        push_to_serverchan("PhantomText 通知", "今日无新论文")
+        push_to_serverchan("今日无新论文")
         return
     
     print(f"✅ 获取到 {len(papers)} 篇论文")
@@ -204,17 +228,16 @@ def main():
     print("📝 生成网页...")
     html = generate_html(papers)
     
-    # 推送到 GitHub
-    print("📤 推送到 GitHub...")
-    success = push_to_github(html)
+    # 写入文件
+    with open('index.html', 'w', encoding='utf-8') as f:
+        f.write(html)
+    print("✅ index.html 已保存")
     
-    # 推送到微信通知
-    if success:
-        msg = f"✅ 已更新 {len(papers)} 篇论文\n"
-        msg += f"🔗 https://{GITHUB_USER}.github.io/{GITHUB_REPO}/"
-        push_to_serverchan("PhantomText 更新完成", msg)
+    # 推送到微信
+    msg = f"已更新 {len(papers)} 篇论文\nhttps://{os.environ.get('GITHUB_REPOSITORY', '').split('/')[0]}.github.io/paper-daily/"
+    push_to_serverchan(msg)
     
-    print("✅ 所有任务完成！")
+    print("🎉 所有任务完成！")
 
 if __name__ == "__main__":
     main()
