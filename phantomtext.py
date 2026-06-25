@@ -7,9 +7,7 @@ from datetime import datetime
 import os
 
 # ==================== 配置 ====================
-# 从 GitHub 秘密变量读取
 SEND_KEY = os.environ.get('SEND_KEY', '')
-GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
 
 # ==================== 功能函数 ====================
 
@@ -143,15 +141,6 @@ def generate_html(papers):
             padding-top: 20px;
             border-top: 1px solid #e0e0e0;
         }}
-        .badge {{
-            display: inline-block;
-            background: #e8f5e9;
-            color: #2e7d32;
-            padding: 2px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            margin-left: 8px;
-        }}
         @media (max-width: 600px) {{
             body {{ padding: 16px; }}
             .header h1 {{ font-size: 22px; }}
@@ -234,7 +223,9 @@ def main():
     print("✅ index.html 已保存")
     
     # 推送到微信
-    msg = f"已更新 {len(papers)} 篇论文\nhttps://{os.environ.get('GITHUB_REPOSITORY', '').split('/')[0]}.github.io/paper-daily/"
+    repo = os.environ.get('GITHUB_REPOSITORY', '')
+    username = repo.split('/')[0] if '/' in repo else ''
+    msg = f"已更新 {len(papers)} 篇论文\nhttps://{username}.github.io/paper-daily/" if username else f"已更新 {len(papers)} 篇论文"
     push_to_serverchan(msg)
     
     print("🎉 所有任务完成！")
