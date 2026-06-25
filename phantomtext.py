@@ -9,7 +9,7 @@ import os
 # ==================== 配置 ====================
 # 从 GitHub 秘密变量读取
 SEND_KEY = os.environ.get('SEND_KEY', '')
-GITHUB_TOKEN = os.environ.get('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', '')
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
 
 # ==================== 功能函数 ====================
 
