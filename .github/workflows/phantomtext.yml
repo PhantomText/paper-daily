@@ -2,8 +2,8 @@ name: PhantomText
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 每小时整点运行
-  workflow_dispatch:      # 支持手动触发
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   run:
@@ -27,7 +27,6 @@ jobs:
           python phantomtext.py
         env:
           SEND_KEY: ${{ secrets.SEND_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: 提交更新
         run: |
